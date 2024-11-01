@@ -2,6 +2,7 @@ package config
 
 import (
 	"flag"
+	"fmt"
 	"log"
 	"os"
 
@@ -9,7 +10,7 @@ import (
 )
 
 type HttpServer struct {
-	Addr string
+	Addr string `yaml:"address" env-required:"true"`
 }
 
 type Config struct {
@@ -25,8 +26,7 @@ func Mustload() *Config {
 	if configpath == "" {
 		flags := flag.String("config", "", "path to the configuration file")
 		flag.Parse()
-
-		configpath := *flags
+		configpath = *flags
 
 		if configpath == "" {
 			log.Fatal("Config Path is not set")
@@ -34,6 +34,7 @@ func Mustload() *Config {
 	}
 
 	if _, err := os.Stat(configpath); os.IsNotExist(err) {
+		fmt.Println(configpath)
 		log.Fatalf("Config file does not exist %s", configpath)
 	}
 
