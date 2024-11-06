@@ -81,29 +81,76 @@ func (s *Sqlite) GetStudentById(id int64) (types.Student, error) {
 
 func (s *Sqlite) GetStudents() ([]types.Student, error) {
 	stmt, err := s.Db.Prepare("SELECT id, name, email, age FROM students")
-	if err != nil{
-		return nil,err
+	if err != nil {
+		return nil, err
 	}
 	defer stmt.Close()
 
-	rows,err  := stmt.Query()
+	rows, err := stmt.Query()
 
-	if err != nil{
-		return nil,err 
+	if err != nil {
+		return nil, err
 	}
 	defer rows.Close()
-	
+
 	var students []types.Student
 
 	for rows.Next() {
 		var student types.Student
 
 		err := rows.Scan(&student.Id, &student.Name, &student.Email, &student.Age)
-		if err != nil{
-			return nil,err
+		if err != nil {
+			return nil, err
 		}
 		students = append(students, student)
 	}
 
-	return students,nil
+	return students, nil
+}
+
+func (s *Sqlite) DeleteStudent(id int64) (int64, error) {
+	stmt, err := s.Db.Prepare("DELETE FROM students WHERE id = ?")
+
+	if err != nil {
+		return 0, err
+	}
+	defer stmt.Close()
+
+	result, err := stmt.Exec(id)
+
+	if err != nil {
+		return 0, err
+	}
+	rowsaffected, err := result.RowsAffected()
+
+	if err != nil {
+		return 0, err
+	}
+
+	return rowsaffected, nil
+}
+
+func (s *Sqlite) UpdateStudent(id int64, name string, email string, age int) (int64, error) {
+	_, err := s.GetStudentById(id)
+	if err != nil {
+		if err.Error() == fmt.Sprintf("no student found with id %s", fmt.Sprint(id)) {
+			return 0, fmt.Errorf("cannot update: %w", err) // student not found
+		}
+		return 0, err // other query error
+	}
+	
+	stmt, err := s.Db.Prepare("UPDATE students SET name = ?, email = ?, age = ? WHERE id = ?")
+	if err != nil {
+		return 0, err
+	}
+	defer stmt.Close()
+	result, err := stmt.Exec(name, email, age, id)
+	if err != nil {
+		return 0, err
+	}
+	rowsaffected, err := result.RowsAffected()
+	if err != nil {
+		return 0, err
+	}
+	return rowsaffected, nil
 }

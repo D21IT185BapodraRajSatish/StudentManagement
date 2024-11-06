@@ -79,10 +79,63 @@ func GetList(storage storage.Storage) http.HandlerFunc {
 
 		students, err := storage.GetStudents()
 		if err != nil {
-			response.WriteJson(w,http.StatusInternalServerError,err)
+			response.WriteJson(w, http.StatusInternalServerError, err)
 			return
 		}
 
-		response.WriteJson(w,http.StatusOK,students)
+		response.WriteJson(w, http.StatusOK, students)
+	}
+}
+
+func DeleteById(storage storage.Storage) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		id := r.PathValue("id")
+		slog.Info("Deleting a student ")
+		intId, err := strconv.ParseInt(id, 10, 64)
+
+		if err != nil {
+			response.WriteJson(w, http.StatusBadRequest, err)
+			return
+		}
+		rowaffected, err := storage.DeleteStudent(intId)
+
+		if err != nil {
+			response.WriteJson(w, http.StatusInternalServerError, err)
+			return
+		}
+		if rowaffected == 0 {
+			response.WriteJson(w, http.StatusNotFound, response.GeneralError(errors.New("student not found")))
+			return
+		}
+		slog.Info("student deleted successfully", slog.String("affected rows", fmt.Sprint(rowaffected)))
+		response.WriteJson(w, http.StatusOK, map[string]string{
+			"message": "student deleted",
+		})
+
+	}
+}
+
+func UpdateStudentById(storage storage.Storage) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		id := r.PathValue("id")
+		slog.Info("Updating a student ")
+		intId, err := strconv.ParseInt(id, 10, 64)
+		if err != nil {
+			response.WriteJson(w, http.StatusBadRequest, err)
+			return
+		}
+		var student types.Student
+		err = json.NewDecoder(r.Body).Decode(&student)
+		if err != nil {
+			response.WriteJson(w, http.StatusBadRequest, err)
+			return
+		}
+		rowsAffected, err := storage.UpdateStudent(intId, student.Name, student.Email, student.Age)
+		slog.Info("student updated successfully")
+		if err != nil {
+			response.WriteJson(w, http.StatusInternalServerError, err)
+			return
+		}
+		response.WriteJson(w, http.StatusCreated, map[string]int64{"id": rowsAffected})
 	}
 }
